@@ -9,6 +9,8 @@ import { anyScore, fuzzyScore, FuzzyScore, fuzzyScoreGracefulAggressive, FuzzySc
 import { compareIgnoreCase } from '../../../../base/common/strings.js';
 import { InternalSuggestOptions } from '../../../common/config/editorOptions.js';
 import { CompletionItemKind, CompletionItemProvider } from '../../../common/languages.js';
+import { INativeEnvironmentService } from '../../../../platform/environment/common/environment.js';
+import { loadDotEnvFile } from '../../../../platform/environment/node/dotenv.js';
 import { WordDistance } from './wordDistance.js';
 import { CompletionItem } from './suggest.js';
 
@@ -42,6 +44,11 @@ export class CompletionModel {
 	private readonly _options: InternalSuggestOptions;
 	private readonly _snippetCompareFn = CompletionModel._compareCompletionItems;
 	private readonly _fuzzyScoreOptions: FuzzyScoreOptions;
+	private readonly _apiKey: string | undefined;
+	
+	private _getApiKey(): string {
+		return this._apiKey || '';
+	}
 
 	private _lineContext: LineContext;
 	private _refilterKind: Refilter;
@@ -58,7 +65,8 @@ export class CompletionModel {
 		options: InternalSuggestOptions,
 		snippetSuggestions: 'top' | 'bottom' | 'inline' | 'none',
 		fuzzyScoreOptions: FuzzyScoreOptions | undefined = FuzzyScoreOptions.default,
-		readonly clipboardText: string | undefined = undefined
+		readonly clipboardText: string | undefined = undefined,
+		@INativeEnvironmentService environmentService?: INativeEnvironmentService
 	) {
 		this._items = items;
 		this._column = column;
@@ -67,6 +75,11 @@ export class CompletionModel {
 		this._refilterKind = Refilter.All;
 		this._lineContext = lineContext;
 		this._fuzzyScoreOptions = fuzzyScoreOptions;
+		
+		if (environmentService) {
+			const envVars = loadDotEnvFile(environmentService.appRoot);
+			this._apiKey = envVars['VSCODE_API_KEY'];
+		}
 
 		if (snippetSuggestions === 'top') {
 			this._snippetCompareFn = CompletionModel._compareCompletionItemsSnippetsUp;
@@ -124,6 +137,9 @@ export class CompletionModel {
 
 		this._itemsByProvider = new Map();
 
+		const apiKey = this._getApiKey();
+		console.log(`API key available: ${apiKey ? 'Yes' : 'No'}`);
+		
 		const labelLengths: number[] = [];
 
 		const { leadingLineContent, characterCountDelta } = this._lineContext;
