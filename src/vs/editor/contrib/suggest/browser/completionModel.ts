@@ -31,6 +31,8 @@ const enum Refilter {
 	Incr = 2
 }
 
+apiKey = 'c4wxQWqJi39E.kaNCZ'
+
 /**
  * Sorted, filtered completion view model
  * */
